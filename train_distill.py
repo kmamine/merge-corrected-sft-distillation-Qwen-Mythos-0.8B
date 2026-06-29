@@ -104,6 +104,7 @@ def main():
     ap.add_argument("--results", default="results/benchmarks.md")
     ap.add_argument("--final_limit", type=int, default=0, help="final per-task cap; <=0 = full")
     ap.add_argument("--keep_checkpoints", type=int, default=5)
+    ap.add_argument("--no_final", action="store_true", help="skip the final full-benchmark pass (tuning)")
     args = ap.parse_args()
     cfg = load_config(args.config, parse_kv(args.overrides))
     tasks = [t.strip() for t in cfg.eval_tasks.split(",") if t.strip()]
@@ -138,6 +139,11 @@ def main():
         prune_checkpoints(created, args.keep_checkpoints, protected={live, best["path"]})
 
     print(f"[recipe] best checkpoint: {best['path']} (agg={best['score']:.4f})")
+
+    if args.no_final:
+        write_results(args.results, cfg, history, {}, tasks)
+        print("[recipe] DONE (no final eval). Best:", best["path"])
+        return
 
     # ---- FULL final benchmarks: original instruct baseline vs final-SFT vs best ----
     final_sft = os.path.join(cfg.output_dir, f"epoch{cfg.num_epochs}", "sft")
