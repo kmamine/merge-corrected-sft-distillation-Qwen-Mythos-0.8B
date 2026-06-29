@@ -50,22 +50,40 @@ def extract_scores(results: dict, tasks: List[str]) -> Dict[str, Optional[float]
 
 
 def run_benchmarks(model_path, tasks, limit=None, batch_size=8, device="cuda:0",
-                   dtype="bfloat16", num_fewshot=None) -> Dict[str, Optional[float]]:
-    """Run lm-eval on `tasks`; return {task: primary_metric} (+ '_aggregate')."""
+                   dtype="bfloat16", num_fewshot=None, retries=4) -> Dict[str, Optional[float]]:
+    """Run lm-eval on `tasks`; return {task: primary_metric} (+ '_aggregate').
+
+    Retries on transient failures (e.g. HuggingFace 5xx while fetching task data) so a
+    network blip doesn't kill a multi-hour run.
+    """
+    import time
+
     import lm_eval
 
     if isinstance(tasks, str):
         tasks = [t.strip() for t in tasks.split(",") if t.strip()]
     lim = None if (limit is None or limit <= 0) else limit
-    results = lm_eval.simple_evaluate(
-        model="hf",
-        model_args=f"pretrained={model_path},dtype={dtype}",
-        tasks=tasks,
-        num_fewshot=num_fewshot,
-        batch_size=batch_size,
-        device=device,
-        limit=lim,
-    )
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            results = lm_eval.simple_evaluate(
+                model="hf",
+                model_args=f"pretrained={model_path},dtype={dtype}",
+                tasks=tasks,
+                num_fewshot=num_fewshot,
+                batch_size=batch_size,
+                device=device,
+                limit=lim,
+            )
+            break
+        except Exception as e:  # noqa: BLE001 - transient HF/network errors are retryable
+            last_err = e
+            if attempt == retries:
+                raise
+            wait = 10 * attempt
+            print(f"[eval] attempt {attempt}/{retries} failed ({type(e).__name__}: "
+                  f"{str(e)[:120]}); retrying in {wait}s")
+            time.sleep(wait)
     scores = extract_scores(results, tasks)
     scores["_aggregate"] = aggregate({k: v for k, v in scores.items() if k != "_aggregate"})
     return scores

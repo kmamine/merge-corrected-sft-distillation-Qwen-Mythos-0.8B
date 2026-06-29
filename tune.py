@@ -40,10 +40,12 @@ def run_trial(i, overrides):
     sets = PROXY + [f"{k}={v}" for k, v in overrides.items()]
     cmd = ["python", "train_distill.py", "--config", "configs/sft.yaml",
            "--no_final", "--results", f"results/tune/trial{i}.md", "--set", *sets]
-    print(f"[tune] trial {i}: {overrides} -> {log_path}")
+    print(f"[tune] trial {i}: {overrides} -> {log_path}", flush=True)
     with open(log_path, "w") as f:
-        subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT,
-                       env={**os.environ})
+        rc = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, env={**os.environ}).returncode
+    if rc != 0:
+        print(f"[tune] trial {i} FAILED (rc={rc}); skipping", flush=True)
+        return float("nan"), float("nan")
     txt = open(log_path, errors="ignore").read()
     agg = float(m.group(1)) if (m := re.search(r"best checkpoint:.*agg=([0-9.]+)", txt)) else float("nan")
     losses = [float(x) for x in re.findall(r"train_loss'?:\s*'?([0-9.eE+-]+)", txt)]
