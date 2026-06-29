@@ -12,6 +12,21 @@ significance caveats rather than as robust improvements. The method-comparison s
 *do* differ, but the dominant effect is *when* a merge helps (only at epoch 1, right after the
 instruct→SFT step) rather than *which* method is used.
 
+## Algorithm
+
+```mermaid
+flowchart TD
+    A["instruct = Qwen3.5-0.8B · live = instruct"] --> B{"for epoch k = 1..E"}
+    B --> C["SFT(live) one epoch on mythos_25k<br/>multi-GPU DDP → sft_k"]
+    C --> D["build a merge candidate per method onto instruct<br/>δ = sft_k − instruct (exclude embed / lm_head)<br/>linear · ties · dare_linear · dare_ties · slerp · breadcrumbs · della"]
+    D --> E["benchmark sft_k AND every merge<br/>GSM8K / MMLU / ARC-C (in-loop, limited)"]
+    E --> F["pick_best = argmax aggregate<br/>(ties → prefer a merge = forgetting guard)"]
+    F --> G["live = winner · track global best · prune to ≤5 checkpoints"]
+    G -->|"k < E"| B
+    G -->|"k = E (done)"| H["FULL benchmarks:<br/>original · final-SFT · best"]
+    H --> I["publish best → Hugging Face (model card + report)"]
+```
+
 ## 1. Research questions
 - **H1 (correction):** does merging the SFT'd weights back toward the original instruct each epoch
   preserve general capability (MMLU/ARC) better than plain SFT, while still injecting reasoning (GSM8K)?
