@@ -1,0 +1,45 @@
+# Merge-corrected SFT distillation config. Overrides distill/config.py defaults.
+# Override at launch with:  --set key=value   (e.g. --set num_epochs=1 max_samples=200)
+
+# ---- models (dense base+instruct PAIR so the merge vectors line up) ----
+base_model: Qwen/Qwen3.5-0.8B-Base      # SFT start + frozen merge reference + baseline
+instruct_model: Qwen/Qwen3.5-0.8B       # frozen reference for the merge correction + baseline
+attn_implementation: sdpa
+gradient_checkpointing: true            # on (cuda:0 is shared on this box)
+
+# ---- distillation data ----
+dataset: WithinUsAI/claude_mythos_distilled_25k
+dataset_split: train
+max_samples: -1                         # <=0 = all (~25k); set small for smoke
+max_seq_len: 2048
+packing: false
+
+# ---- SFT (full fine-tune by default; set use_lora=true for a budget run) ----
+use_lora: false
+num_epochs: 3                           # E = number of merge-corrected rounds
+per_device_batch_size: 4
+gradient_accumulation_steps: 8
+learning_rate: 1.0e-5
+weight_decay: 0.0
+warmup_ratio: 0.03
+lr_scheduler: cosine
+max_grad_norm: 1.0
+seed: 42
+
+# ---- merge correction:  merged = base + chat_alpha*(instruct-base) + merge_alpha*(sft-base) ----
+merge_alpha: 1.0
+chat_alpha: 1.0
+
+# ---- benchmarks (lm-evaluation-harness) ----
+eval_tasks: gsm8k,mmlu,arc_challenge
+eval_limit: 200                         # in-loop per-task cap; final eval uses full (limit<=0)
+eval_batch_size: 8
+
+# ---- io / logging ----
+output_dir: outputs/distill
+logging_steps: 10
+
+# ---- mlflow ----
+mlflow_experiment: mythos-distill
+mlflow_tracking_uri: http://localhost:5000
+run_name: merge-corrected-sft

@@ -1,7 +1,7 @@
 [project]
-name = "aero-cpt-merge"
+name = "mythos-distill"
 version = "0.1.0"
-description = "Aviation-safety domain adaptation: continual pretraining + task-arithmetic model merging, with a domain/retention dissociation eval."
+description = "Reasoning distillation into Qwen3.5-0.8B via merge-corrected iterative SFT (SFT vs SFT+merge across LLM benchmarks)."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -12,17 +12,14 @@ dependencies = [
     "transformers>=4.50.0",
     "accelerate>=1.0.0",
     "datasets>=3.0.0",
-    "peft>=0.13.0",
+    "trl>=1.0.0",                 # SFTTrainer
+    "lm-eval>=0.4.0",             # EleutherAI lm-evaluation-harness (GSM8K/MMLU/ARC)
+    "peft>=0.13.0",               # LoRA fallback
     "huggingface_hub>=0.25.0",
+    "mlflow>=3.0.0",              # tracking client; match the running server (3.14.0)
     "pyyaml>=6.0",
     "numpy>=1.24",
 ]
-
-[project.optional-dependencies]
-# Stronger merges (TIES / DARE-TIES). Not needed for the default merge.py path.
-merge = ["mergekit>=0.0.5"]
-# Experiment tracking (set report_to: wandb in configs/cpt.yaml).
-tracking = ["wandb>=0.17"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
@@ -33,7 +30,7 @@ dev = ["pytest>=8.0"]
 package = false
 
 [tool.pytest.ini_options]
-# `from aero_cpt...` resolves from the repo root; tests live in tests/.
+# `from distill...` resolves from the repo root; tests live in tests/.
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q"
