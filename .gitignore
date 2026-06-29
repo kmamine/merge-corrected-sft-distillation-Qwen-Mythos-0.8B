@@ -22,3 +22,6 @@ wandb/
 .DS_Store
 .idea/
 .vscode/
+
+# lr-sweep scratch (trial logs); conclusion is in results/REPORT.md
+results/tune/
