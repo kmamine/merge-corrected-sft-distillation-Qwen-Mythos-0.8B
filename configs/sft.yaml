@@ -1,9 +1,8 @@
 # Merge-corrected SFT distillation config. Overrides distill/config.py defaults.
 # Override at launch with:  --set key=value   (e.g. --set num_epochs=1 max_samples=200)
 
-# ---- models (dense base+instruct PAIR so the merge vectors line up) ----
-base_model: Qwen/Qwen3.5-0.8B-Base      # SFT start + frozen merge reference + baseline
-instruct_model: Qwen/Qwen3.5-0.8B       # frozen reference for the merge correction + baseline
+# ---- model (SFT this instruct checkpoint; the merge soups back toward it) ----
+instruct_model: Qwen/Qwen3.5-0.8B       # SFT start + frozen merge anchor + baseline
 attn_implementation: sdpa
 gradient_checkpointing: true            # on (cuda:0 is shared on this box)
 
@@ -26,13 +25,12 @@ lr_scheduler: cosine
 max_grad_norm: 1.0
 seed: 42
 
-# ---- merge correction:  merged = base + chat_alpha*(instruct-base) + merge_alpha*(sft-base) ----
-merge_alpha: 1.0
-chat_alpha: 1.0
+# ---- merge correction:  merged = instruct + merge_alpha*(sft - instruct)  (model soup) ----
+merge_alpha: 0.5                        # <1 pulls toward the original instruct; 1.0 == sft
 
 # ---- benchmarks (lm-evaluation-harness) ----
 eval_tasks: gsm8k,mmlu,arc_challenge
-eval_limit: 200                         # in-loop per-task cap; final eval uses full (limit<=0)
+eval_limit: 64                          # in-loop per-task cap (mmlu = 57 subtasks); final eval uses full
 eval_batch_size: 8
 
 # ---- io / logging ----

@@ -9,17 +9,17 @@ epoch — using merging as a *correction* against forgetting general capability.
 ## The idea
 
 ```
-base = Qwen/Qwen3.5-0.8B-Base ;  instruct = Qwen/Qwen3.5-0.8B ;  live = base
+instruct = Qwen/Qwen3.5-0.8B ;  live = instruct
 for epoch k in 1..E:
     sft_k   = SFT(live, mythos_25k, 1 epoch)
-    merge_k = instruct + α·(sft_k − base)            # chat-vector / task arithmetic, excl. embed/lm_head
+    merge_k = instruct + α·(sft_k − instruct)        # model soup back toward instruct, excl. embed/lm_head
     score sft_k and merge_k on GSM8K / MMLU / ARC-Challenge
     live    = merge_k if score(merge_k) >= score(sft_k) else sft_k     # "recorrect" vs "continue"
-final: FULL benchmarks on base, instruct, final-SFT, and the best checkpoint
+final: FULL benchmarks on the original instruct, final-SFT, and the best checkpoint
 ```
 
 The deliverable is the **SFT vs SFT+merge** comparison per epoch, plus a final table against the
-original base/instruct baselines (`results/benchmarks.md`). Everything is tracked in **MLflow**; the
+original **instruct** baseline (`results/benchmarks.md`). Everything is tracked in **MLflow**; the
 chosen checkpoint is published to the **Hugging Face Hub** with a model card.
 
 ## Setup

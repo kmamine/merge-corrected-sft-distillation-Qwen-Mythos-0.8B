@@ -16,9 +16,8 @@ import yaml
 
 @dataclass
 class SFTMergeConfig:
-    # ---- models (a dense base+instruct PAIR so the merge vectors line up) ----
-    base_model: str = "Qwen/Qwen3.5-0.8B-Base"      # SFT start + frozen merge reference
-    instruct_model: str = "Qwen/Qwen3.5-0.8B"       # frozen reference for the merge correction + baseline
+    # ---- model (SFT this instruct checkpoint; the merge soups back toward it) ----
+    instruct_model: str = "Qwen/Qwen3.5-0.8B"       # SFT start + frozen merge anchor + baseline
     attn_implementation: str = "sdpa"               # sdpa | flash_attention_2 | eager
     gradient_checkpointing: bool = True             # on by default (cuda:0 is shared on this box)
 
@@ -47,9 +46,8 @@ class SFTMergeConfig:
     max_grad_norm: float = 1.0
     seed: int = 42
 
-    # ---- merge correction (merged = base + chat_alpha*(instruct-base) + merge_alpha*(sft-base)) ----
-    merge_alpha: float = 1.0                        # scale on the SFT task-vector (sft - base)
-    chat_alpha: float = 1.0                         # scale on the instruct vector
+    # ---- merge correction:  merged = instruct + merge_alpha*(sft - instruct)  (model soup) ----
+    merge_alpha: float = 0.5                        # <1 pulls toward the original instruct; 1.0 == sft
 
     # ---- benchmarks (lm-evaluation-harness) ----
     eval_tasks: str = "gsm8k,mmlu,arc_challenge"    # comma list

@@ -13,11 +13,10 @@ import os
 import shutil
 
 
-def build_model_card(repo, base, instruct, dataset, alpha, results_md: str) -> str:
+def build_model_card(repo, instruct, dataset, alpha, results_md: str) -> str:
     front = f"""---
 license: apache-2.0
 base_model:
-- {base}
 - {instruct}
 datasets:
 - {dataset}
@@ -27,19 +26,18 @@ tags:
 - distillation
 - reasoning
 - merge-corrected-sft
-- task-arithmetic
+- model-soup
 - qwen3.5
 ---"""
     body = f"""
 # {repo.split('/')[-1]}
 
-Reasoning-distilled **Qwen3.5-0.8B** produced by **merge-corrected iterative SFT**: the student
-(`{base}`) is supervised fine-tuned on [`{dataset}`](https://huggingface.co/datasets/{dataset})
-(Claude-Mythos distilled reasoning traces). After each epoch the SFT checkpoint is compared against
-its task-arithmetic merge onto the instruct model
-(`merged = {instruct} + α·(SFT − base)`, α={alpha}); the better of *plain SFT* vs *SFT+merge* on
-GSM8K / MMLU / ARC-Challenge seeds the next epoch — using merging as a correction against
-catastrophic forgetting of general capability.
+Reasoning-distilled **Qwen3.5-0.8B** produced by **merge-corrected iterative SFT**: `{instruct}` is
+supervised fine-tuned on [`{dataset}`](https://huggingface.co/datasets/{dataset}) (Claude-Mythos
+distilled reasoning traces). After each epoch the SFT checkpoint is compared against a model-soup back
+toward the original instruct (`merged = {instruct} + α·(SFT − {instruct})`, α={alpha}); the better of
+*plain SFT* vs *SFT+merge* on GSM8K / MMLU / ARC-Challenge seeds the next epoch — using merging as a
+correction against catastrophic forgetting of general capability.
 
 ## Usage
 ```python
@@ -72,10 +70,9 @@ def main():
     ap.add_argument("--model_dir", required=True, help="local checkpoint dir to publish")
     ap.add_argument("--repo", required=True, help="e.g. Amine-CV/Qwen3.5-0.8B-Mythos-Distill")
     ap.add_argument("--results", default="results/benchmarks.md")
-    ap.add_argument("--base", default="Qwen/Qwen3.5-0.8B-Base")
     ap.add_argument("--instruct", default="Qwen/Qwen3.5-0.8B")
     ap.add_argument("--dataset", default="WithinUsAI/claude_mythos_distilled_25k")
-    ap.add_argument("--alpha", default="1.0")
+    ap.add_argument("--alpha", default="0.5")
     ap.add_argument("--private", action="store_true")
     args = ap.parse_args()
 
@@ -87,7 +84,7 @@ def main():
             results_md = f.read()
         shutil.copy(args.results, os.path.join(args.model_dir, "benchmarks.md"))
 
-    card = build_model_card(args.repo, args.base, args.instruct, args.dataset, args.alpha, results_md)
+    card = build_model_card(args.repo, args.instruct, args.dataset, args.alpha, results_md)
     with open(os.path.join(args.model_dir, "README.md"), "w") as f:
         f.write(card)
 

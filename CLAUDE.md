@@ -30,14 +30,14 @@ pyproject.toml                                                 # uv project + py
 ## The recipe (data flows one direction; the orchestrator drives the loop)
 
 ```
-base = Qwen/Qwen3.5-0.8B-Base ;  instruct = Qwen/Qwen3.5-0.8B ;  live = base
+instruct = Qwen/Qwen3.5-0.8B ;  live = instruct        # no base model in this version
 for epoch k in 1..E:
     sft_k   = SFT(live, mythos_25k, 1 epoch)            # sft_worker.py via accelerate (multi-GPU)
-    merge_k = instruct + α·(sft_k − base)               # distill/merge.py::merge_models (CPU)
+    merge_k = instruct + α·(sft_k − instruct)           # distill/merge.py::merge_models (soup, CPU)
     bench sft_k and merge_k (GSM8K/MMLU/ARC-C, limited) # distill/eval_bench.py (lm-eval, cuda:1)
     live = merge_k if score(merge_k) >= score(sft_k) else sft_k   # distill/recipe.py::decide
     log both to MLflow ; track best
-final: FULL benchmarks on base, instruct, final-SFT, best → results/benchmarks.md
+final: FULL benchmarks on instruct, final-SFT, best → results/benchmarks.md
 ```
 
 - **`train_distill.py`** is a single-process orchestrator: it shells out to `sft_worker.py` via
@@ -97,8 +97,9 @@ the string `"2e-5"`. Keep new `SFTMergeConfig` fields plain scalars / `Optional[
 
 ## Invariants to preserve when editing
 
-- **Base vs instruct must be the same family / identical architecture** (`Qwen3.5-0.8B-Base` +
-  `Qwen3.5-0.8B`). The merge subtracts aligned state dicts tensor-by-tensor.
+- **No base model in this version.** We SFT the **instruct** (`Qwen3.5-0.8B`) directly; the merge is a
+  soup back toward that same instruct (`merged = instruct + α·(sft − instruct)`, `merge_alpha<1` is the
+  forgetting guard, `=1` is plain SFT). The instruct is also the only eval baseline.
 - **Merge excludes `embed_tokens`/`lm_head`/`wte`/`wpe`** (`EXCLUDE_KEYS` in `distill/merge.py`); merging
   them degrades quality. Non-matching tensors are kept from instruct as-is.
 - **Merged/SFT checkpoints keep the *instruct* tokenizer + chat template** (the base may ship none;

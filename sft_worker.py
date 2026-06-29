@@ -7,7 +7,7 @@ worker so the multi-GPU SFT step is isolated from the single-process orchestrati
 (merge + benchmark eval) that drives the recipe.
 
     accelerate launch --config_file configs/accelerate_multi.yaml sft_worker.py \
-        --config configs/sft.yaml --init_model Qwen/Qwen3.5-0.8B-Base --out outputs/distill/epoch1/sft
+        --config configs/sft.yaml --init_model Qwen/Qwen3.5-0.8B --out outputs/distill/epoch1/sft
 """
 from __future__ import annotations
 
@@ -30,8 +30,8 @@ def main():
     args = ap.parse_args()
     cfg = load_config(args.config, parse_kv(args.overrides))
 
-    # The base model may ship no chat template; use the instruct tokenizer (same family/vocab)
-    # to render chat and as the SFT processing class, and save it alongside the checkpoint.
+    # Use the instruct tokenizer (chat template) to render chat and as the SFT processing
+    # class, and save it alongside the checkpoint so merge/eval load a consistent tokenizer.
     tok = AutoTokenizer.from_pretrained(cfg.instruct_model)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token

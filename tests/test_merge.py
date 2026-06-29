@@ -15,36 +15,32 @@ class TestExcluded:
 
 
 class TestMergeStateDicts:
-    def test_task_arithmetic_on_eligible_tensor(self):
-        base = {"w": torch.zeros(4)}
+    def test_soup_interpolates_toward_sft(self):
         inst = {"w": torch.ones(4)}
-        sft = {"w": torch.full((4,), 2.0)}
-        # merged = base + 1*(inst-base) + 1*(sft-base) = 1 + 2 = 3
-        merged, n_merged, n_skipped = merge_state_dicts(base, inst, sft, 1.0, 1.0)
-        assert n_merged == 1 and n_skipped == 0
-        assert torch.allclose(merged["w"], torch.full((4,), 3.0))
+        sft = {"w": torch.full((4,), 3.0)}
+        # merged = instruct + 0.5*(sft - instruct) = 1 + 0.5*2 = 2
+        merged, n_merged, n_kept = merge_state_dicts(inst, sft, alpha=0.5)
+        assert n_merged == 1 and n_kept == 0
+        assert torch.allclose(merged["w"], torch.full((4,), 2.0))
 
-    def test_alpha_scales_sft_vector(self):
-        base = {"w": torch.zeros(2)}
+    def test_alpha_one_equals_sft(self):
         inst = {"w": torch.zeros(2)}
         sft = {"w": torch.full((2,), 4.0)}
-        merged, _, _ = merge_state_dicts(base, inst, sft, merge_alpha=0.5, chat_alpha=0.0)
-        assert torch.allclose(merged["w"], torch.full((2,), 2.0))   # 0.5 * 4
+        merged, _, _ = merge_state_dicts(inst, sft, alpha=1.0)
+        assert torch.allclose(merged["w"], torch.full((2,), 4.0))
 
     def test_excluded_key_kept_from_instruct(self):
-        base = {"model.embed_tokens.weight": torch.zeros(2)}
         inst = {"model.embed_tokens.weight": torch.ones(2)}
         sft = {"model.embed_tokens.weight": torch.full((2,), 9.0)}
-        merged, n_merged, n_skipped = merge_state_dicts(base, inst, sft, 1.0, 1.0)
-        assert n_merged == 0 and n_skipped == 1
+        merged, n_merged, n_kept = merge_state_dicts(inst, sft, alpha=1.0)
+        assert n_merged == 0 and n_kept == 1
         assert torch.allclose(merged["model.embed_tokens.weight"], torch.ones(2))
 
     def test_shape_mismatch_kept_from_instruct(self):
-        base = {"w": torch.zeros(2)}
-        inst = {"w": torch.ones(3)}        # shape differs
+        inst = {"w": torch.ones(3)}        # shape differs from sft
         sft = {"w": torch.zeros(2)}
-        merged, n_merged, n_skipped = merge_state_dicts(base, inst, sft)
-        assert n_skipped == 1 and torch.allclose(merged["w"], torch.ones(3))
+        merged, n_merged, n_kept = merge_state_dicts(inst, sft, alpha=0.5)
+        assert n_kept == 1 and torch.allclose(merged["w"], torch.ones(3))
 
 
 class TestEvalAggregation:

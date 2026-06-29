@@ -1,9 +1,10 @@
 """Merge-correction decision policy for the iterative distillation recipe.
 
 After each SFT epoch we have two candidates — the plain SFT checkpoint and its
-merge-corrected version (`instruct + alpha*(sft - base)`). `decide` picks which one
-seeds the next epoch: merge wins ties (>=), so we only keep plain SFT when it is
-strictly better, biasing toward the capability-preserving correction.
+merge-corrected version (`instruct + alpha*(sft - instruct)`, a soup back toward the
+original instruct). `decide` picks which one seeds the next epoch: merge wins ties
+(>=), so we only keep plain SFT when it is strictly better, biasing toward the
+capability-preserving correction.
 """
 from __future__ import annotations
 

@@ -24,8 +24,8 @@ class TestLoadConfig:
     def test_defaults(self):
         cfg = load_config(None)
         assert isinstance(cfg, SFTMergeConfig)
-        assert cfg.base_model == "Qwen/Qwen3.5-0.8B-Base"
         assert cfg.instruct_model == "Qwen/Qwen3.5-0.8B"
+        assert not hasattr(cfg, "base_model")          # base model removed from this version
         assert cfg.dataset == "WithinUsAI/claude_mythos_distilled_25k"
         assert cfg.num_epochs == 3
 
