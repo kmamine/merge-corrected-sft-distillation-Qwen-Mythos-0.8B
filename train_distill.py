@@ -90,6 +90,15 @@ def write_results(path, cfg, history, finals, tasks):
         for name, scores in h["scores"].items():
             mark = " ⬅ winner" if name == h["winner"] else ""
             lines.append(row(f"epoch{h['epoch']}-{name}{mark}", scores))
+    # the "road taken": which checkpoint seeded each epoch and which candidate won
+    lines += ["", "## Training trajectory (the road taken)", ""]
+    for h in history:
+        start = h.get("start", "?")
+        agg = h["scores"].get(h["winner"], {}).get("_aggregate")
+        agg_s = f"{agg:.4f}" if isinstance(agg, (int, float)) else "n/a"
+        lines.append(f"- epoch {h['epoch']}: start `{start}` → "
+                     f"compare {{sft + {len(h['scores']) - 1} merges}} → "
+                     f"**winner `{h['winner']}`** (agg {agg_s}) → seeds epoch {h['epoch'] + 1}")
     lines += ["", "## Final (full benchmarks)", "", header, sep]
     for name, scores in finals.items():
         lines.append(row(name, scores))
@@ -119,6 +128,7 @@ def main():
 
     for k in range(1, cfg.num_epochs + 1):
         ep = os.path.join(cfg.output_dir, f"epoch{k}")
+        start = os.path.basename(live) if live != instruct else "instruct"   # road taken
         out_sft = sft_one_epoch(args, live, os.path.join(ep, "sft"))
         created.append(out_sft)
 
@@ -143,8 +153,8 @@ def main():
             agg = s["_aggregate"]
             if isinstance(agg, (int, float)) and agg > best["score"]:
                 best = {"score": agg, "path": cand_path[name], "tag": f"epoch{k}-{name}"}
-        history.append({"epoch": k, "scores": scores, "winner": winner})
-        print(f"[recipe] epoch {k}: winner={winner} -> live={live}")
+        history.append({"epoch": k, "start": start, "scores": scores, "winner": winner})
+        print(f"[recipe] epoch {k}: start={start} winner={winner} -> live={live}")
 
         prune_checkpoints(created, args.keep_checkpoints, protected={live, best["path"]})
 

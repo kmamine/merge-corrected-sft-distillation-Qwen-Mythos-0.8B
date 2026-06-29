@@ -64,7 +64,28 @@ def fetch_mlflow_section(tracking_uri, experiment) -> str:
         return f"## MLflow log\n\n_(could not reach tracking server: {e})_\n"
     if not runs:
         return ""
-    # union of metric keys across runs, in a stable order
+
+    def tag(r, key):
+        return next((t["value"] for t in r["data"].get("tags", []) if t["key"] == key), None)
+
+    def agg(r):
+        return next((m["value"] for m in r["data"].get("metrics", []) if m["key"] == "_aggregate"), None)
+
+    # ---- "road taken": per-epoch candidates, in order, winner marked ----
+    epoch_runs = [r for r in runs if tag(r, "epoch") and tag(r, "candidate")]
+    traj = []
+    if epoch_runs:
+        traj = ["## Training trajectory (the road taken)", ""]
+        epochs = sorted({int(tag(r, "epoch")) for r in epoch_runs})
+        for e in epochs:
+            cands = [r for r in epoch_runs if int(tag(r, "epoch")) == e]
+            cands.sort(key=lambda r: (agg(r) is not None, agg(r) or 0), reverse=True)
+            win = next((tag(r, "candidate") for r in cands if tag(r, "winner") == "True"), "?")
+            scored = ", ".join(f"{tag(r, 'candidate')} {agg(r):.4f}" for r in cands if agg(r) is not None)
+            traj.append(f"- **epoch {e}**: {scored} → winner **{win}**")
+        traj.append("")
+
+    # ---- full dump: every run's metrics ----
     keys = []
     for r in runs:
         for m in r["data"].get("metrics", []):
@@ -80,7 +101,7 @@ def fetch_mlflow_section(tracking_uri, experiment) -> str:
         cells = [f"{mv[k]:.4f}" if k in mv else "" for k in keys]
         lines.append(f"| {name} | " + " | ".join(cells) + " |")
     lines.append("")
-    return "\n".join(lines)
+    return "\n".join(traj + lines)
 
 
 def build_model_card(repo, instruct, dataset, alpha, results_md, losses_md, mlflow_md) -> str:
