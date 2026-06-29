@@ -46,8 +46,12 @@ class SFTMergeConfig:
     max_grad_norm: float = 1.0
     seed: int = 42
 
-    # ---- merge correction:  merged = instruct + merge_alpha*(sft - instruct)  (model soup) ----
-    merge_alpha: float = 0.5                        # <1 pulls toward the original instruct; 1.0 == sft
+    # ---- merge correction(s): compared head-to-head per epoch (mergekit-style methods) ----
+    merge_methods: str = "linear,ties,dare_linear,slerp"   # comma list; see distill/merge.py::METHODS
+    merge_alpha: float = 0.5                        # scale on the task vector (linear/ties/dare); 1.0 == sft
+    ties_density: float = 0.7                       # TIES: keep top fraction of |delta| by magnitude
+    dare_drop_p: float = 0.5                        # DARE: fraction of delta entries dropped (then rescaled)
+    slerp_t: float = 0.5                            # SLERP: interpolation factor instruct(0)->sft(1)
 
     # ---- benchmarks (lm-evaluation-harness) ----
     eval_tasks: str = "gsm8k,mmlu,arc_challenge"    # comma list

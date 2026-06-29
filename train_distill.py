@@ -1,10 +1,11 @@
 """Merge-corrected iterative SFT distillation — the orchestrator (multi-GPU).
 
-Per epoch: SFT one epoch (multi-GPU, both cuda:0+cuda:1) -> build the
-merge-corrected candidate (instruct + alpha*(sft - instruct), a soup back toward the
-original instruct) -> benchmark both (limited) -> keep the better as the next epoch's
-start (merge wins ties = a guard against forgetting). Logs to MLflow; a final full
-benchmark pass compares the original instruct / final-SFT / best.
+Per epoch: SFT one epoch (multi-GPU, both cuda:0+cuda:1) -> build one merge-corrected
+candidate per method (linear / ties / dare_linear / slerp, all anchored on the original
+instruct) -> benchmark the plain SFT and every merge candidate (limited) -> keep the
+highest-scoring as the next epoch's start (ties favour a merge = a guard against
+forgetting). Logs every candidate to MLflow; a final full benchmark pass compares the
+original instruct / final-SFT / best.
 
     MLFLOW_TRACKING_URI=http://localhost:5000 python train_distill.py --config configs/sft.yaml
 
@@ -23,7 +24,7 @@ from distill import tracking
 from distill.config import load_config, parse_kv
 from distill.eval_bench import run_benchmarks
 from distill.merge import merge_models
-from distill.recipe import decide
+from distill.recipe import pick_best
 
 ACCEL_CONFIG = os.environ.get("ACCEL_CONFIG", "configs/accelerate_multi.yaml")
 SFT_GPUS = os.environ.get("SFT_CUDA_VISIBLE_DEVICES", "0,1")
@@ -81,13 +82,14 @@ def write_results(path, cfg, history, finals, tasks):
 
     lines = ["# Mythos distillation — benchmark results", "",
              f"- instruct `{cfg.instruct_model}` · dataset `{cfg.dataset}`",
-             f"- E={cfg.num_epochs} · merge_alpha={cfg.merge_alpha} "
-             f"(soup: instruct + α·(sft−instruct))", "",
-             f"## Per-epoch (in-loop, limit={cfg.eval_limit})", "", header, sep]
+             f"- E={cfg.num_epochs} · merge methods compared per epoch: "
+             f"`{cfg.merge_methods}` (alpha={cfg.merge_alpha}, density={cfg.ties_density}, "
+             f"drop_p={cfg.dare_drop_p}, slerp_t={cfg.slerp_t})", "",
+             f"## Per-epoch — SFT vs merge methods (in-loop, limit={cfg.eval_limit})", "", header, sep]
     for h in history:
-        lines.append(row(f"epoch{h['epoch']}-sft", h["sft"]))
-        lines.append(row(f"epoch{h['epoch']}-merge", h["merge"]))
-        lines.append(f"| → decision epoch{h['epoch']}: **{h['decision']}** | | | |")
+        for name, scores in h["scores"].items():
+            mark = " ⬅ winner" if name == h["winner"] else ""
+            lines.append(row(f"epoch{h['epoch']}-{name}{mark}", scores))
     lines += ["", "## Final (full benchmarks)", "", header, sep]
     for name, scores in finals.items():
         lines.append(row(name, scores))
@@ -110,6 +112,7 @@ def main():
     tasks = [t.strip() for t in cfg.eval_tasks.split(",") if t.strip()]
 
     instruct = cfg.instruct_model
+    methods = [m.strip() for m in cfg.merge_methods.split(",") if m.strip()]
     live = instruct                                   # SFT starts from the instruct model
     best = {"score": float("-inf"), "path": None, "tag": None}
     history, created = [], []
@@ -117,25 +120,30 @@ def main():
     for k in range(1, cfg.num_epochs + 1):
         ep = os.path.join(cfg.output_dir, f"epoch{k}")
         out_sft = sft_one_epoch(args, live, os.path.join(ep, "sft"))
-        out_merge = merge_models(instruct, out_sft, os.path.join(ep, "merge"), cfg.merge_alpha)
-        created += [out_sft, out_merge]
+        created.append(out_sft)
 
-        s_sft = bench(out_sft, cfg, cfg.eval_limit, f"epoch{k}-sft")
-        s_merge = bench(out_merge, cfg, cfg.eval_limit, f"epoch{k}-merge")
-        choice, _ = decide(s_sft["_aggregate"], s_merge["_aggregate"])
-        live = out_merge if choice == "merge" else out_sft
+        # candidate models: plain SFT + one per merge method (all vs the original instruct)
+        cand_path = {"sft": out_sft}
+        for m in methods:
+            out_m = merge_models(instruct, out_sft, os.path.join(ep, f"merge_{m}"), method=m,
+                                 alpha=cfg.merge_alpha, density=cfg.ties_density,
+                                 drop_p=cfg.dare_drop_p, slerp_t=cfg.slerp_t, seed=cfg.seed)
+            cand_path[m] = out_m
+            created.append(out_m)
 
-        log_eval(cfg, f"epoch{k}-sft", s_sft, {"epoch": k, "side": "sft"}, step=k)
-        log_eval(cfg, f"epoch{k}-merge", s_merge,
-                 {"epoch": k, "side": "merge", "decision": choice}, step=k)
-        history.append({"epoch": k, "sft": s_sft, "merge": s_merge, "decision": choice})
-        print(f"[recipe] epoch {k}: decision={choice} -> live={live}")
+        scores = {name: bench(p, cfg, cfg.eval_limit, f"epoch{k}-{name}") for name, p in cand_path.items()}
+        winner, _ = pick_best({name: s["_aggregate"] for name, s in scores.items()})
+        live = cand_path[winner]
 
-        for cand, sc in [(out_sft, s_sft), (out_merge, s_merge)]:
-            agg = sc["_aggregate"]
+        for name, s in scores.items():
+            log_eval(cfg, f"epoch{k}-{name}", s,
+                     {"epoch": k, "candidate": name, "winner": name == winner}, step=k)
+            agg = s["_aggregate"]
             if isinstance(agg, (int, float)) and agg > best["score"]:
-                best = {"score": agg, "path": cand,
-                        "tag": f"epoch{k}-{'sft' if cand == out_sft else 'merge'}"}
+                best = {"score": agg, "path": cand_path[name], "tag": f"epoch{k}-{name}"}
+        history.append({"epoch": k, "scores": scores, "winner": winner})
+        print(f"[recipe] epoch {k}: winner={winner} -> live={live}")
+
         prune_checkpoints(created, args.keep_checkpoints, protected={live, best["path"]})
 
     print(f"[recipe] best checkpoint: {best['path']} (agg={best['score']:.4f})")

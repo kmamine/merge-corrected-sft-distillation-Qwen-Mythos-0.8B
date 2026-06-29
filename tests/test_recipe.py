@@ -1,7 +1,7 @@
-"""Unit tests for distill.recipe.decide (the merge-vs-continue policy; offline)."""
+"""Unit tests for distill.recipe (the merge-vs-continue + best-candidate policies; offline)."""
 import math
 
-from distill.recipe import decide
+from distill.recipe import decide, pick_best
 
 
 class TestDecide:
@@ -24,3 +24,17 @@ class TestDecide:
     def test_both_missing_continues_sft(self):
         choice, score = decide(None, None)
         assert choice == "sft" and math.isnan(score)
+
+
+class TestPickBest:
+    def test_highest_aggregate_wins(self):
+        name, score = pick_best({"sft": 0.40, "linear": 0.45, "ties": 0.42})
+        assert name == "linear" and score == 0.45
+
+    def test_tie_prefers_a_merge_over_sft(self):
+        name, _ = pick_best({"sft": 0.45, "linear": 0.45})
+        assert name == "linear"
+
+    def test_nan_or_none_treated_as_worst(self):
+        name, _ = pick_best({"sft": 0.40, "slerp": float("nan"), "dare_linear": None})
+        assert name == "sft"

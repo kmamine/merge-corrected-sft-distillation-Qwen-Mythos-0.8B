@@ -28,3 +28,18 @@ def decide(score_sft: Optional[float], score_merge: Optional[float]) -> Tuple[st
     if not merge_ok:
         return "sft", float(score_sft)
     return ("merge", float(score_merge)) if score_merge >= score_sft else ("sft", float(score_sft))
+
+
+def pick_best(scores: dict) -> Tuple[str, float]:
+    """Pick the winning candidate from {name: aggregate}.
+
+    Highest aggregate wins; NaN/None are treated as -inf. On ties a merge beats plain
+    SFT (the capability-preserving correction is favoured). Returns (name, score).
+    """
+    def rank(name):
+        v = scores[name]
+        ok = isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v))
+        return (v if ok else float("-inf"), 0 if name == "sft" else 1)  # tie -> prefer a merge
+
+    best = max(scores, key=rank)
+    return best, scores[best]

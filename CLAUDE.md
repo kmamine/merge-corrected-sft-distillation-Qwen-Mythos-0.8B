@@ -32,13 +32,19 @@ pyproject.toml                                                 # uv project + py
 ```
 instruct = Qwen/Qwen3.5-0.8B ;  live = instruct        # no base model in this version
 for epoch k in 1..E:
-    sft_k   = SFT(live, mythos_25k, 1 epoch)            # sft_worker.py via accelerate (multi-GPU)
-    merge_k = instruct + α·(sft_k − instruct)           # distill/merge.py::merge_models (soup, CPU)
-    bench sft_k and merge_k (GSM8K/MMLU/ARC-C, limited) # distill/eval_bench.py (lm-eval, cuda:1)
-    live = merge_k if score(merge_k) >= score(sft_k) else sft_k   # distill/recipe.py::decide
-    log both to MLflow ; track best
+    sft_k = SFT(live, mythos_25k, 1 epoch)                       # sft_worker.py via accelerate (multi-GPU)
+    for m in merge_methods (linear, ties, dare_linear, slerp):   # distill/merge.py::merge_models (CPU)
+        merge_{k,m} = m(instruct, sft_k)                         # all anchored on the instruct
+    bench sft_k AND every merge candidate (GSM8K/MMLU/ARC-C, limited)   # distill/eval_bench.py (lm-eval, cuda:1)
+    live = argmax aggregate over {sft_k, merges}                 # distill/recipe.py::pick_best (ties→merge)
+    log all candidates to MLflow ; track best
 final: FULL benchmarks on instruct, final-SFT, best → results/benchmarks.md
 ```
+
+Several **mergekit-style merge methods are compared head-to-head each epoch** (all implemented in
+pure PyTorch in `distill/merge.py`, anchored on the instruct: `delta = sft − instruct`):
+`linear` (instruct+α·δ), `ties` (trim δ to top-`ties_density`), `dare_linear` (drop `dare_drop_p` of
+δ + rescale), `slerp` (spherical interp, factor `slerp_t`). Configurable via `merge_methods`.
 
 - **`train_distill.py`** is a single-process orchestrator: it shells out to `sft_worker.py` via
   `accelerate launch` for the multi-GPU SFT step, then runs merge (CPU) + benchmarks (cuda:1) and the
@@ -104,8 +110,8 @@ the string `"2e-5"`. Keep new `SFTMergeConfig` fields plain scalars / `Optional[
   them degrades quality. Non-matching tensors are kept from instruct as-is.
 - **Merged/SFT checkpoints keep the *instruct* tokenizer + chat template** (the base may ship none;
   `sft_worker.py` renders chat and saves with the instruct tokenizer).
-- **`decide` biases to the merge on ties** (`>=`) — plain SFT is kept only when strictly better. This
-  is the catastrophic-forgetting guard; don't flip it silently.
+- **`pick_best` chooses the highest-aggregate candidate** among `{sft} ∪ merges`; on ties a merge
+  beats plain SFT (the catastrophic-forgetting guard). Don't flip the tie-bias silently.
 - **In-loop benchmarks are `eval_limit`-capped for speed; the FINAL eval is full** (`limit<=0`). Don't
   conflate the two — the per-epoch table is a fast proxy, the final table is the result.
 - **Benchmarks run in completion mode (no chat template)** for apples-to-apples across all models.
