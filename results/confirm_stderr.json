@@ -1,0 +1,29 @@
+{
+  "original (Qwen3.5-0.8B, pre-training)": {
+    "gsm8k": 0.3260045489006823,
+    "mmlu": 0.4813416892180601,
+    "arc_challenge": 0.37542662116040953,
+    "_aggregate": 0.39425761975971735,
+    "gsm8k_stderr": 0.012911675645682836,
+    "mmlu_stderr": 0.004083287207423524,
+    "arc_challenge_stderr": 0.014150631435111728
+  },
+  "run1-best epoch1/merge (lr1e-5, linear soup)": {
+    "gsm8k": 0.36315390447308565,
+    "mmlu": 0.48062953995157387,
+    "arc_challenge": 0.3703071672354949,
+    "_aggregate": 0.4046968705533848,
+    "gsm8k_stderr": 0.013246614539839868,
+    "mmlu_stderr": 0.004089308087518705,
+    "arc_challenge_stderr": 0.014111298751675015
+  },
+  "run2-best epoch3/sft (lr5e-6, multi-method)": {
+    "gsm8k": 0.3434420015163002,
+    "mmlu": 0.4727246830935764,
+    "arc_challenge": 0.38139931740614336,
+    "_aggregate": 0.3991886673386733,
+    "gsm8k_stderr": 0.01307993381180031,
+    "mmlu_stderr": 0.00408919231509219,
+    "arc_challenge_stderr": 0.014194389086685315
+  }
+}
