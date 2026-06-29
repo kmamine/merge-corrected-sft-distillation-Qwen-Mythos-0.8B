@@ -17,6 +17,12 @@ import re
 import shutil
 
 
+def mermaid_to_image(md: str, img="figures/fig_algorithm.png") -> str:
+    """Replace ```mermaid fenced blocks with an image — the HF card renderer does not
+    draw Mermaid (GitHub does), so the card embeds a pre-rendered PNG instead."""
+    return re.sub(r"```mermaid\b.*?```", f"![Algorithm]({img})", md, flags=re.DOTALL)
+
+
 def parse_train_losses(log_path):
     """Best-effort: per-epoch final train_loss + the loss trajectory from the run log."""
     finals, traj = [], []
@@ -175,7 +181,7 @@ def main():
 
     results_md = ""
     if os.path.exists(args.results):
-        results_md = open(args.results).read()
+        results_md = mermaid_to_image(open(args.results).read())   # HF card: Mermaid -> PNG
         shutil.copy(args.results, os.path.join(args.model_dir, "benchmarks.md"))
 
     finals, traj = parse_train_losses(args.train_log)

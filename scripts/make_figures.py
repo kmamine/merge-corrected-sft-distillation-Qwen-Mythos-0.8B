@@ -88,8 +88,49 @@ def fig_loss_collapse():
     fig.tight_layout(); fig.savefig(f"{OUT}/fig_loss_collapse.png", dpi=150); plt.close(fig)
 
 
+def fig_algorithm():
+    """Flowchart of the merge-corrected iterative SFT recipe (PNG for the HF card, where
+    Mermaid does not render; GitHub keeps the live Mermaid)."""
+    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
+    boxes = [
+        ("instruct = Qwen3.5-0.8B      live ← instruct", "#d7e8ff"),
+        ("SFT(live) one epoch on mythos_25k  →  sft_k   (multi-GPU DDP)", "#e7f5e9"),
+        ("merge candidate per method onto instruct   (δ = sft_k − instruct, excl. embed/lm_head)\n"
+         "linear · ties · dare_linear · dare_ties · slerp · breadcrumbs · della", "#fff2e0"),
+        ("benchmark sft_k AND every merge   ·   GSM8K / MMLU / ARC-C   (in-loop, limited)", "#fff2e0"),
+        ("pick best = argmax aggregate  (ties → prefer a merge)\n"
+         "live ← winner   ·   track global best   ·   prune ≤ 5 checkpoints", "#fff2e0"),
+        ("k = E  →  FULL benchmarks:   original · final-SFT · best", "#e7f5e9"),
+        ("publish best  →  Hugging Face   (model card + report)", "#d7e8ff"),
+    ]
+    n = len(boxes)
+    fig, ax = plt.subplots(figsize=(11, 10))
+    ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ys = [0.92 - i * 0.135 for i in range(n)]
+    bw, bh, cx = 0.74, 0.052, 0.42
+    for (text, color), y in zip(boxes, ys):
+        ax.add_patch(FancyBboxPatch((cx - bw / 2, y - bh), bw, 2 * bh,
+                                    boxstyle="round,pad=0.006,rounding_size=0.015",
+                                    fc=color, ec="#555", lw=1.2))
+        ax.text(cx, y, text, ha="center", va="center", fontsize=8.5)
+    for i in range(n - 1):
+        ax.annotate("", xy=(cx, ys[i + 1] + bh), xytext=(cx, ys[i] - bh),
+                    arrowprops=dict(arrowstyle="-|>", color="#444", lw=1.4))
+    ax.text(cx + 0.02, (ys[4] + ys[5]) / 2, "k = E", ha="left", va="center", fontsize=8.5, color="#444")
+    # loop-back: pick-best (idx 4) → SFT (idx 1)
+    ax.add_patch(FancyArrowPatch((cx + bw / 2, ys[4]), (cx + bw / 2, ys[1]),
+                                 connectionstyle="arc3,rad=-0.9", arrowstyle="-|>",
+                                 color="#1a73e8", lw=1.7, mutation_scale=16))
+    ax.text(0.95, (ys[1] + ys[4]) / 2, "next epoch\n(k < E)", ha="center", va="center",
+            fontsize=8.5, color="#1a73e8")
+    ax.set_title("Merge-corrected iterative SFT distillation", fontsize=13, weight="bold")
+    fig.savefig(f"{OUT}/fig_algorithm.png", dpi=150, bbox_inches="tight"); plt.close(fig)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
+    fig_algorithm()
     fig_final_benchmarks()
     fig_method_comparison()
     fig_loss_collapse()
