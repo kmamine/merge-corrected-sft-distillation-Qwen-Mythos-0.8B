@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this code or model, please cite it as below."
+title: "Merge-Corrected SFT Distillation into Qwen3.5-0.8B"
+abstract: >-
+  Reasoning distillation into Qwen3.5-0.8B via merge-corrected iterative SFT:
+  each epoch the plain SFT checkpoint is compared against several mergekit-style
+  merges back onto the instruct model (linear, ties, dare_linear, dare_ties,
+  slerp, breadcrumbs, della) on GSM8K / MMLU / ARC-Challenge, and the best
+  candidate seeds the next epoch — merging used as a correction against
+  catastrophic forgetting.
+authors:
+  - family-names: Kerkouri
+    given-names: Amine
+repository-code: "https://github.com/kmamine/merge-corrected-sft-distillation-Qwen-Mythos-0.8B"
+url: "https://huggingface.co/Amine-CV/Qwen3.5-0.8B-Mythos-Distill"
+keywords:
+  - model-merging
+  - knowledge-distillation
+  - supervised-fine-tuning
+  - mergekit
+  - qwen
+  - lm-evaluation-harness
+license: MIT
+version: "0.1.0"
+date-released: "2026-06-29"
