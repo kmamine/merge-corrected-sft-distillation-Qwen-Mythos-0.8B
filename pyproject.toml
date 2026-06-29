@@ -1,0 +1,39 @@
+[project]
+name = "aero-cpt-merge"
+version = "0.1.0"
+description = "Aviation-safety domain adaptation: continual pretraining + task-arithmetic model merging, with a domain/retention dissociation eval."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+# Runtime stack. Kept in sync with requirements.txt (pip path documented in README).
+dependencies = [
+    "torch>=2.6.0",
+    "transformers>=4.50.0",
+    "accelerate>=1.0.0",
+    "datasets>=3.0.0",
+    "peft>=0.13.0",
+    "huggingface_hub>=0.25.0",
+    "pyyaml>=6.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# Stronger merges (TIES / DARE-TIES). Not needed for the default merge.py path.
+merge = ["mergekit>=0.0.5"]
+# Experiment tracking (set report_to: wandb in configs/cpt.yaml).
+tracking = ["wandb>=0.17"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.uv]
+# This is an application/research repo, not a distributable library: don't build
+# or install the project root into the env. uv manages deps only.
+package = false
+
+[tool.pytest.ini_options]
+# `from aero_cpt...` resolves from the repo root; tests live in tests/.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"

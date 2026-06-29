@@ -1,0 +1,21 @@
+# Single-GPU (or CPU) Accelerate config — the default for the LoRA run.
+# Launch:  accelerate launch --config_file configs/accelerate.yaml train_cpt.py --config configs/cpt.yaml
+#
+# For multi-GPU FULL continual pretraining, use an FSDP2 config instead (the one
+# from the FSDP-SFT repo works as-is): just point --config_file at it and pass
+# --num_processes <N>. LoRA runs happily single-GPU and rarely needs sharding.
+
+compute_environment: LOCAL_MACHINE
+debug: false
+distributed_type: "NO"        # "NO" = single device; switch to MULTI_GPU or FSDP for >1 GPU
+downcast_bf16: 'no'
+machine_rank: 0
+main_training_function: main
+mixed_precision: bf16
+num_machines: 1
+num_processes: 1
+rdzv_backend: static
+same_network: true
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false

@@ -1,0 +1,45 @@
+# Continual-pretraining config. Overrides src/config.py defaults.
+# Override at launch with:  --set key=value   (e.g. --set max_train_minutes=60)
+
+# ---- model (use a dense base+instruct PAIR so the merge vectors line up) ----
+base_model: Qwen/Qwen2.5-0.5B          # instruct counterpart: Qwen/Qwen2.5-0.5B-Instruct
+attn_implementation: sdpa              # sdpa | flash_attention_2 | eager
+gradient_checkpointing: false
+
+# ---- LoRA (default: fast, fits any GPU >=16GB) ----
+use_lora: true
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_target_modules: all-linear        # or a comma list: q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj
+
+# ---- data ----
+corpus_path: data/cpt_corpus.jsonl
+block_size: 1024
+num_proc: 4
+replay_ratio: 0.05                     # 5% general-text replay to limit forgetting; 0 disables
+replay_dataset: Salesforce/wikitext
+replay_name: wikitext-2-raw-v1
+replay_split: train
+
+# ---- optimisation ----
+per_device_batch_size: 8
+gradient_accumulation_steps: 4
+num_epochs: 5                          # upper bound; the time cap usually stops first
+max_train_minutes: 90                  # << WALL-CLOCK CAP. set 60 for a 1h run. <=0 disables.
+max_steps: -1
+learning_rate: 1.0e-4                  # LoRA. For full CPT (use_lora=false) use ~2.0e-5.
+weight_decay: 0.0
+warmup_ratio: 0.03
+lr_scheduler: cosine
+max_grad_norm: 1.0
+adam_beta1: 0.9
+adam_beta2: 0.95
+seed: 42
+
+# ---- io / logging ----
+output_dir: outputs/cpt               # adapter -> outputs/cpt/adapter ; full -> outputs/cpt/final
+logging_steps: 10
+save_steps: 0                         # 0 = save only at end (short run)
+report_to: null                       # wandb | tensorboard | null
+run_name: aero-cpt

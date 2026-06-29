@@ -1,0 +1,24 @@
+# Two-GPU DDP Accelerate config (cuda:0 + cuda:1) for LoRA or small full CPT.
+# Launch (pin the visible devices so it targets exactly these two GPUs):
+#   CUDA_VISIBLE_DEVICES=0,1 accelerate launch --config_file configs/accelerate_multi.yaml \
+#       train_cpt.py --config configs/cpt.yaml
+#
+# NOTE: cuda:0 is shared with another process on this box — keep per_device_batch_size
+# modest so the rank-0 process fits alongside it. For large FULL CPT use an FSDP2 config
+# instead of plain DDP (see configs/accelerate.yaml header).
+
+compute_environment: LOCAL_MACHINE
+debug: false
+distributed_type: MULTI_GPU
+downcast_bf16: 'no'
+gpu_ids: 0,1
+machine_rank: 0
+main_training_function: main
+mixed_precision: bf16
+num_machines: 1
+num_processes: 2
+rdzv_backend: static
+same_network: true
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false

@@ -1,0 +1,16 @@
+# Core stack
+torch>=2.6.0
+transformers>=4.50.0
+accelerate>=1.0.0
+datasets>=3.0.0
+peft>=0.13.0           # LoRA continual pretraining
+huggingface_hub>=0.25.0
+pyyaml>=6.0
+numpy>=1.24
+
+# Optional: stronger merges (TIES / DARE-TIES). Not needed for the default
+# task-arithmetic merge in merge.py.
+# mergekit>=0.0.5
+
+# Optional: experiment tracking (set report_to: wandb in configs/cpt.yaml)
+# wandb>=0.17

@@ -1,0 +1,26 @@
+# mergekit TIES config — sign-consensus + trimmed merge of the CPT model into instruct.
+# Use this (instead of merge.py) when the simple task-arithmetic merge shows
+# destructive interference. Requires a *full* CPT model dir (materialise the LoRA
+# adapter first: see merge.py / README), then:
+#
+#   pip install mergekit
+#   mergekit-yaml configs/merge_ties.yaml outputs/merged_ties --cuda
+#
+# Edit the three paths below to your local dirs.
+
+merge_method: ties
+base_model: Qwen/Qwen2.5-0.5B          # the shared base
+models:
+  - model: Qwen/Qwen2.5-0.5B-Instruct  # recover instruction-following
+    parameters:
+      weight: 1.0
+      density: 0.9
+  - model: outputs/cpt/cpt_full        # the domain-CPT model (full weights)
+    parameters:
+      weight: 0.6
+      density: 0.7
+parameters:
+  normalize: true
+  int8_mask: true
+dtype: bfloat16
+tokenizer_source: Qwen/Qwen2.5-0.5B-Instruct   # keep the instruct chat template
