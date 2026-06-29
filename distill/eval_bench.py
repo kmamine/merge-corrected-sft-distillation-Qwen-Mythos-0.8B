@@ -33,6 +33,19 @@ def primary_metric(task_result: dict) -> Optional[float]:
     return None
 
 
+def primary_stderr(task_result: dict) -> Optional[float]:
+    """Standard error of the headline metric (same preference order as primary_metric)."""
+    for pref in _METRIC_PREFERENCE:
+        for key, val in task_result.items():
+            if not isinstance(key, str) or "_stderr" in key:
+                continue
+            if key.split(",", 1)[0] == pref and isinstance(val, (int, float)) and not math.isnan(val):
+                filt = key.split(",", 1)[1] if "," in key else "none"
+                se = task_result.get(f"{pref}_stderr,{filt}")
+                return float(se) if isinstance(se, (int, float)) and not math.isnan(se) else None
+    return None
+
+
 def aggregate(scores: Dict[str, Optional[float]]) -> float:
     """Mean of the finite per-task scores (NaN/None dropped); NaN if none usable."""
     vals = [v for v in scores.values()
@@ -50,7 +63,8 @@ def extract_scores(results: dict, tasks: List[str]) -> Dict[str, Optional[float]
 
 
 def run_benchmarks(model_path, tasks, limit=None, batch_size=8, device="cuda:0",
-                   dtype="bfloat16", num_fewshot=None, retries=4) -> Dict[str, Optional[float]]:
+                   dtype="bfloat16", num_fewshot=None, retries=4,
+                   with_stderr=False) -> Dict[str, Optional[float]]:
     """Run lm-eval on `tasks`; return {task: primary_metric} (+ '_aggregate').
 
     Retries on transient failures (e.g. HuggingFace 5xx while fetching task data) so a
@@ -86,6 +100,10 @@ def run_benchmarks(model_path, tasks, limit=None, batch_size=8, device="cuda:0",
             time.sleep(wait)
     scores = extract_scores(results, tasks)
     scores["_aggregate"] = aggregate({k: v for k, v in scores.items() if k != "_aggregate"})
+    if with_stderr:
+        res = results.get("results", results)
+        for t in tasks:
+            scores[f"{t}_stderr"] = primary_stderr(res[t]) if t in res else None
     return scores
 
 

@@ -3,7 +3,7 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
-from distill.eval_bench import aggregate, primary_metric
+from distill.eval_bench import aggregate, primary_metric, primary_stderr
 from distill.merge import excluded, merge_state_dicts
 
 
@@ -102,3 +102,12 @@ class TestEvalAggregation:
     def test_aggregate_mean_ignoring_missing(self):
         assert aggregate({"a": 0.4, "b": 0.6}) == 0.5
         assert aggregate({"a": 0.4, "b": None, "c": float("nan")}) == 0.4
+
+    def test_primary_stderr_matches_chosen_metric(self):
+        tr = {"exact_match,strict-match": 0.7, "exact_match_stderr,strict-match": 0.012,
+              "acc,none": 0.4, "acc_stderr,none": 0.02}
+        assert primary_metric(tr) == 0.7              # exact_match preferred
+        assert primary_stderr(tr) == 0.012            # its matching stderr
+
+    def test_primary_stderr_none_when_absent(self):
+        assert primary_stderr({"acc,none": 0.42}) is None
