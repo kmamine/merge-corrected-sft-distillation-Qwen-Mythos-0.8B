@@ -127,7 +127,9 @@ def main():
         for m in methods:
             out_m = merge_models(instruct, out_sft, os.path.join(ep, f"merge_{m}"), method=m,
                                  alpha=cfg.merge_alpha, density=cfg.ties_density,
-                                 drop_p=cfg.dare_drop_p, slerp_t=cfg.slerp_t, seed=cfg.seed)
+                                 drop_p=cfg.dare_drop_p, slerp_t=cfg.slerp_t,
+                                 gamma=cfg.breadcrumbs_gamma, epsilon=cfg.della_epsilon,
+                                 seed=cfg.seed)
             cand_path[m] = out_m
             created.append(out_m)
 

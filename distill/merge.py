@@ -23,7 +23,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 EXCLUDE_KEYS = ("embed_tokens", "lm_head", "wte", "wpe")
-METHODS = ("linear", "ties", "dare_linear", "dare_ties", "slerp")
+METHODS = ("linear", "ties", "dare_linear", "dare_ties", "slerp", "breadcrumbs", "della")
 
 
 def excluded(key: str) -> bool:
@@ -52,6 +52,29 @@ def _dare(delta, drop_p, generator):
     return delta * keep / (1.0 - drop_p)
 
 
+def _breadcrumbs(delta, density, gamma):
+    """Keep a middle magnitude band of delta: drop the top `gamma` (outliers), then keep
+    the top `density` of what remains; zero the rest (mergekit 'breadcrumbs')."""
+    n = delta.numel()
+    order = delta.abs().flatten().argsort(descending=True)
+    n_drop_top = int(n * gamma)
+    n_keep = max(1, int(n * density))
+    keep_idx = order[n_drop_top:n_drop_top + n_keep]
+    mask = torch.zeros(n, dtype=delta.dtype)
+    mask[keep_idx] = 1.0
+    return delta * mask.reshape(delta.shape)
+
+
+def _della(delta, base_p, epsilon, generator):
+    """Magnitude-ranked probabilistic drop (mergekit 'della'): smaller-magnitude entries get
+    a higher drop probability (base_p + epsilon around the median rank), then rescale."""
+    flat = delta.abs().flatten()
+    ranks = flat.argsort().argsort().float() / max(1, flat.numel() - 1)   # 0=smallest .. 1=largest
+    p = (base_p + epsilon * (0.5 - ranks.reshape(delta.shape))).clamp(0.0, 0.99)
+    keep = (torch.rand(delta.shape, generator=generator) >= p).to(delta.dtype)
+    return delta * keep / (1.0 - p)
+
+
 def _slerp(w, s, t):
     """Per-tensor spherical interpolation between w (t=0) and s (t=1); lerp when collinear."""
     wf, sf = w.flatten().float(), s.flatten().float()
@@ -66,7 +89,7 @@ def _slerp(w, s, t):
     return out.reshape(w.shape)
 
 
-def _merge_tensor(w, s, method, alpha, density, drop_p, slerp_t, generator):
+def _merge_tensor(w, s, method, alpha, density, drop_p, slerp_t, gamma, epsilon, generator):
     if method == "slerp":
         return _slerp(w, s, slerp_t)
     delta = s.float() - w.float()
@@ -74,11 +97,15 @@ def _merge_tensor(w, s, method, alpha, density, drop_p, slerp_t, generator):
         delta = _dare(delta, drop_p, generator)
     if method in ("ties", "dare_ties"):
         delta = _trim_topk(delta, density)
+    if method == "breadcrumbs":
+        delta = _breadcrumbs(delta, density, gamma)
+    if method == "della":
+        delta = _della(delta, drop_p, epsilon, generator)
     return w.float() + alpha * delta
 
 
 def merge_state_dicts(instruct_sd, sft_sd, method="linear", alpha=0.5, density=0.7,
-                      drop_p=0.5, slerp_t=0.5, seed=0):
+                      drop_p=0.5, slerp_t=0.5, gamma=0.1, epsilon=0.1, seed=0):
     """Pure tensor merge by `method`. Returns (merged_state_dict, n_merged, n_kept).
 
     A key is merged only if present in both, not excluded, shape-matched, and floating
@@ -92,7 +119,7 @@ def merge_state_dicts(instruct_sd, sft_sd, method="linear", alpha=0.5, density=0
         if (k in sft_sd and not excluded(k)
                 and w.shape == sft_sd[k].shape and torch.is_floating_point(w)):
             merged[k] = _merge_tensor(w, sft_sd[k], method, alpha, density, drop_p, slerp_t,
-                                      generator).to(w.dtype)
+                                      gamma, epsilon, generator).to(w.dtype)
             n_merged += 1
         else:
             merged[k] = w
@@ -115,17 +142,18 @@ def materialise_full(instruct_id, adapter_dir, dtype, out):
 
 
 def merge_models(instruct_id, sft_path, out, method="linear", alpha=0.5, density=0.7,
-                 drop_p=0.5, slerp_t=0.5, seed=0, dtype=torch.bfloat16):
+                 drop_p=0.5, slerp_t=0.5, gamma=0.1, epsilon=0.1, seed=0, dtype=torch.bfloat16):
     """Merge the SFT checkpoint toward the instruct model by `method`; save to `out`."""
     if is_adapter_dir(sft_path):
         sft_path = materialise_full(instruct_id, sft_path, dtype, out + "_sft_full")
 
-    print(f"[merge] {method} (alpha={alpha} density={density} drop_p={drop_p} t={slerp_t}): "
-          f"{instruct_id} <- {sft_path}")
+    print(f"[merge] {method} (alpha={alpha} density={density} drop_p={drop_p} t={slerp_t} "
+          f"gamma={gamma} eps={epsilon}): {instruct_id} <- {sft_path}")
     instruct = AutoModelForCausalLM.from_pretrained(instruct_id, dtype=dtype)
     sft = AutoModelForCausalLM.from_pretrained(sft_path, dtype=dtype)
     merged_sd, n_merged, n_kept = merge_state_dicts(
-        instruct.state_dict(), sft.state_dict(), method, alpha, density, drop_p, slerp_t, seed)
+        instruct.state_dict(), sft.state_dict(), method, alpha, density, drop_p, slerp_t,
+        gamma, epsilon, seed)
     print(f"[merge] {method}: merged {n_merged} tensors, kept {n_kept} from instruct")
 
     instruct.load_state_dict(merged_sd)
@@ -147,10 +175,12 @@ def main():
     ap.add_argument("--density", type=float, default=0.7)
     ap.add_argument("--drop_p", type=float, default=0.5)
     ap.add_argument("--slerp_t", type=float, default=0.5)
+    ap.add_argument("--gamma", type=float, default=0.1)
+    ap.add_argument("--epsilon", type=float, default=0.1)
     ap.add_argument("--out", default="outputs/merged")
     args = ap.parse_args()
     merge_models(args.instruct, args.sft, args.out, args.method, args.alpha,
-                 args.density, args.drop_p, args.slerp_t)
+                 args.density, args.drop_p, args.slerp_t, args.gamma, args.epsilon)
 
 
 if __name__ == "__main__":

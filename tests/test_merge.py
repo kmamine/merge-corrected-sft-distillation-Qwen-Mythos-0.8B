@@ -53,6 +53,26 @@ class TestMergeMethods:
         assert torch.allclose(m0["w"], inst["w"], atol=1e-5)
         assert torch.allclose(m1["w"], sft["w"], atol=1e-5)
 
+    def test_breadcrumbs_keeps_middle_band(self):
+        inst = {"w": torch.zeros(4)}
+        sft = {"w": torch.tensor([10.0, 5.0, 1.0, 0.1])}      # delta == sft
+        # gamma=0.25 drops the top 1 (|10|); density=0.5 keeps top-2 of the rest (5,1) -> [0,5,1,0]
+        merged, _, _ = merge_state_dicts(inst, sft, method="breadcrumbs", alpha=1.0,
+                                         density=0.5, gamma=0.25)
+        assert torch.allclose(merged["w"], torch.tensor([0.0, 5.0, 1.0, 0.0]))
+
+    def test_della_no_drop_equals_linear(self):
+        inst, sft = {"w": torch.zeros(8)}, {"w": torch.ones(8)}
+        merged, _, _ = merge_state_dicts(inst, sft, method="della", alpha=1.0,
+                                         drop_p=0.0, epsilon=0.0)
+        assert torch.allclose(merged["w"], torch.ones(8))
+
+    def test_della_seeded_deterministic(self):
+        inst, sft = {"w": torch.zeros(64)}, {"w": torch.ones(64)}
+        a, _, _ = merge_state_dicts(inst, sft, method="della", alpha=1.0, drop_p=0.5, seed=3)
+        b, _, _ = merge_state_dicts(inst, sft, method="della", alpha=1.0, drop_p=0.5, seed=3)
+        assert torch.allclose(a["w"], b["w"])
+
     def test_unknown_method_raises(self):
         with pytest.raises(ValueError):
             merge_state_dicts({"w": torch.zeros(2)}, {"w": torch.ones(2)}, method="bogus")

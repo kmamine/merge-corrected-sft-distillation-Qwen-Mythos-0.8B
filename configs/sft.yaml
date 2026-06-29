@@ -25,8 +25,14 @@ lr_scheduler: cosine
 max_grad_norm: 1.0
 seed: 42
 
-# ---- merge correction:  merged = instruct + merge_alpha*(sft - instruct)  (model soup) ----
-merge_alpha: 0.5                        # <1 pulls toward the original instruct; 1.0 == sft
+# ---- merge corrections compared per epoch (all anchored on instruct; delta = sft - instruct) ----
+merge_methods: linear,ties,dare_linear,dare_ties,slerp,breadcrumbs,della
+merge_alpha: 0.5                        # scale on the task vector (1.0 == sft)
+ties_density: 0.7                       # TIES/breadcrumbs keep-fraction
+dare_drop_p: 0.5                        # DARE/della base drop fraction
+slerp_t: 0.5                            # SLERP factor instruct(0)->sft(1)
+breadcrumbs_gamma: 0.1                  # breadcrumbs top-outlier drop fraction
+della_epsilon: 0.1                      # della drop-prob spread by magnitude rank
 
 # ---- benchmarks (lm-evaluation-harness) ----
 eval_tasks: gsm8k,mmlu,arc_challenge

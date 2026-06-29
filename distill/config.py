@@ -47,11 +47,13 @@ class SFTMergeConfig:
     seed: int = 42
 
     # ---- merge correction(s): compared head-to-head per epoch (mergekit-style methods) ----
-    merge_methods: str = "linear,ties,dare_linear,slerp"   # comma list; see distill/merge.py::METHODS
-    merge_alpha: float = 0.5                        # scale on the task vector (linear/ties/dare); 1.0 == sft
-    ties_density: float = 0.7                       # TIES: keep top fraction of |delta| by magnitude
-    dare_drop_p: float = 0.5                        # DARE: fraction of delta entries dropped (then rescaled)
+    merge_methods: str = "linear,ties,dare_linear,dare_ties,slerp,breadcrumbs,della"  # see merge.py::METHODS
+    merge_alpha: float = 0.5                        # scale on the task vector (linear/ties/dare/breadcrumbs/della); 1.0 == sft
+    ties_density: float = 0.7                       # TIES/breadcrumbs: keep top fraction of |delta| by magnitude
+    dare_drop_p: float = 0.5                        # DARE/della: base fraction of delta entries dropped (rescaled)
     slerp_t: float = 0.5                            # SLERP: interpolation factor instruct(0)->sft(1)
+    breadcrumbs_gamma: float = 0.1                  # breadcrumbs: top fraction of |delta| dropped as outliers
+    della_epsilon: float = 0.1                      # della: drop-prob spread around dare_drop_p by magnitude rank
 
     # ---- benchmarks (lm-evaluation-harness) ----
     eval_tasks: str = "gsm8k,mmlu,arc_challenge"    # comma list
