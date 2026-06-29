@@ -6,6 +6,23 @@ SFT with model merging: after each epoch, the plain SFT checkpoint is compared a
 task-arithmetic merge onto the instruct model, and the better one (on benchmarks) seeds the next
 epoch — using merging as a *correction* against forgetting general capability.
 
+## Model
+
+**🤗 [`Amine-CV/Qwen3.5-0.8B-Mythos-Distill`](https://huggingface.co/Amine-CV/Qwen3.5-0.8B-Mythos-Distill)** —
+the published checkpoint (the epoch-1 merge correction; GSM8K +3.7 pts ≈2σ over the base instruct,
+MMLU retained). Full benchmark tables, training trajectory, and ±stderr results are in the model card
+and [`results/REPORT.md`](results/REPORT.md).
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+tok = AutoTokenizer.from_pretrained("Amine-CV/Qwen3.5-0.8B-Mythos-Distill")
+model = AutoModelForCausalLM.from_pretrained("Amine-CV/Qwen3.5-0.8B-Mythos-Distill",
+                                             dtype="bfloat16", device_map="auto")
+msgs = [{"role": "user", "content": "Prove there are infinitely many primes."}]
+ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt").to(model.device)
+print(tok.decode(model.generate(ids, max_new_tokens=512)[0][ids.shape[1]:], skip_special_tokens=True))
+```
+
 ## The idea
 
 ```

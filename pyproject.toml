@@ -1,5 +1,5 @@
 [project]
-name = "mythos-distill"
+name = "merge-corrected-sft-distillation"
 version = "0.1.0"
 description = "Reasoning distillation into Qwen3.5-0.8B via merge-corrected iterative SFT (SFT vs SFT+merge across LLM benchmarks)."
 readme = "README.md"
