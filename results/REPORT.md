@@ -55,6 +55,8 @@ Training loss collapses toward ~0.02 with ~99% token accuracy in every epoch —
 5e-6 slowed but did not prevent this on the full data. This is the core motivation for the merge
 correction and a key caveat on the magnitude of genuine generalization.
 
+![SFT loss collapse](figures/fig_loss_collapse.png)
+
 ## 4. Results
 
 ### 4.1 Per-epoch method comparison (in-loop, limit=32 — high variance, decision-only)
@@ -72,6 +74,8 @@ best at 0.417/0.415) — the correction recovers reasoning the raw SFT-from-inst
 **Caveat:** `limit=32` makes GSM8K/ARC components high-variance (binomial SE ≈ ±0.06–0.09 at n=32), so
 many of these per-method gaps are within noise; they drive the heuristic decision but are not
 publication-grade comparisons.
+
+![Per-epoch method comparison](figures/fig_method_comparison.png)
 
 ### 4.2 Trajectory (the road taken)
 `instruct → epoch 1: TIES merge (0.417) → epoch 2: SFT (0.425) → epoch 3: SFT (0.425, global best)`.
@@ -108,6 +112,8 @@ Full-eval re-run of the three contenders with lm-eval's reported per-task stderr
 **Bottom line:** the only effect that reaches ~2σ is run1-best's GSM8K gain; aggregate improvements are
 within noise on this single run. run1 `epoch1/merge` is the strongest checkpoint (best GSM8K + full
 MMLU retention + top aggregate) and is the recommended publish candidate.
+
+![Final benchmarks with standard errors](figures/fig_final_benchmarks.png)
 
 ## 5. Analysis
 - **H1 (correction):** *Partially supported.* Merging helped only at epoch 1 (the largest distribution

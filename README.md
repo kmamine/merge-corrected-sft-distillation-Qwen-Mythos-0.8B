@@ -39,6 +39,27 @@ The deliverable is the **SFT vs SFT+merge** comparison per epoch, plus a final t
 original **instruct** baseline (`results/benchmarks.md`). Everything is tracked in **MLflow**; the
 chosen checkpoint is published to the **Hugging Face Hub** with a model card.
 
+## Results
+
+Full write-up with error bars, significance, and threats-to-validity in [`results/REPORT.md`](results/REPORT.md).
+
+**Final benchmarks (full eval, ±1 SE):** the merge checkpoint improves GSM8K (+3.7 pts, ≈2σ) while
+retaining MMLU; aggregate gains are within noise on a single run.
+
+![Final benchmarks](results/figures/fig_final_benchmarks.png)
+
+**Per-epoch SFT vs 7 merge methods:** merges win at epoch 1 (TIES best) right after the instruct→SFT
+shift; once stabilized, plain SFT overtakes — so *when* you merge matters more than *which* method.
+
+![Per-epoch method comparison](results/figures/fig_method_comparison.png)
+
+**Training dynamics:** SFT loss collapses to ~0.02 (≈99% token accuracy) — heavy memorization of the
+templated data, which motivates the merge correction.
+
+![SFT loss collapse](results/figures/fig_loss_collapse.png)
+
+Regenerate with `python scripts/make_figures.py`.
+
 ## Setup
 
 ```bash
