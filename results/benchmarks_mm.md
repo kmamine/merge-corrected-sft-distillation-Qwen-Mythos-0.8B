@@ -1,9 +1,9 @@
-# Mythos distillation — benchmark results
+# Mythos distillation - benchmark results
 
 - instruct `Qwen/Qwen3.5-0.8B` · dataset `WithinUsAI/claude_mythos_distilled_25k`
 - E=3 · merge methods compared per epoch: `linear,ties,dare_linear,dare_ties,slerp,breadcrumbs,della` (alpha=0.5, density=0.7, drop_p=0.5, slerp_t=0.5)
 
-## Per-epoch — SFT vs merge methods (in-loop, limit=32)
+## Per-epoch - SFT vs merge methods (in-loop, limit=32)
 
 | model | gsm8k | mmlu | arc_challenge | _aggregate |
 | --- | --- | --- | --- | --- |

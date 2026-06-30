@@ -18,7 +18,7 @@ import shutil
 
 
 def mermaid_to_image(md: str, img="figures/fig_algorithm.png") -> str:
-    """Replace ```mermaid fenced blocks with an image — the HF card renderer does not
+    """Replace ```mermaid fenced blocks with an image - the HF card renderer does not
     draw Mermaid (GitHub does), so the card embeds a pre-rendered PNG instead."""
     return re.sub(r"```mermaid\b.*?```", f"![Algorithm]({img})", md, flags=re.DOTALL)
 
@@ -133,7 +133,7 @@ Reasoning-distilled **Qwen3.5-0.8B** produced by **merge-corrected iterative SFT
 supervised fine-tuned on [`{dataset}`](https://huggingface.co/datasets/{dataset}) (Claude-Mythos
 distilled reasoning traces). After each epoch the SFT checkpoint is compared against a model-soup back
 toward the original instruct (`merged = {instruct} + α·(SFT − {instruct})`, α={alpha}); the better of
-*plain SFT* vs *SFT+merge* on GSM8K / MMLU / ARC-Challenge seeds the next epoch — using merging as a
+*plain SFT* vs *SFT+merge* on GSM8K / MMLU / ARC-Challenge seeds the next epoch - using merging as a
 correction against catastrophic forgetting of general capability.
 
 ## Usage

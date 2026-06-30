@@ -1,4 +1,4 @@
-"""Merge-corrected iterative SFT distillation — the orchestrator (multi-GPU).
+"""Merge-corrected iterative SFT distillation - the orchestrator (multi-GPU).
 
 Per epoch: SFT one epoch (multi-GPU, both cuda:0+cuda:1) -> build one merge-corrected
 candidate per method (linear / ties / dare_linear / slerp, all anchored on the original
@@ -11,7 +11,7 @@ original instruct / final-SFT / best.
 
 Single-process driver: it shells out to `sft_worker.py` via `accelerate launch` for
 the multi-GPU SFT step (CUDA_VISIBLE_DEVICES=0,1), and runs merge (CPU) + benchmarks
-(cuda:1, the free GPU) in-process — keeping the orchestration free of rank guards.
+(cuda:1, the free GPU) in-process - keeping the orchestration free of rank guards.
 """
 from __future__ import annotations
 
@@ -80,12 +80,12 @@ def write_results(path, cfg, history, finals, tasks):
         cells = [f"{scores.get(c):.4f}" if isinstance(scores.get(c), (int, float)) else "n/a" for c in cols]
         return f"| {name} | " + " | ".join(cells) + " |"
 
-    lines = ["# Mythos distillation — benchmark results", "",
+    lines = ["# Mythos distillation - benchmark results", "",
              f"- instruct `{cfg.instruct_model}` · dataset `{cfg.dataset}`",
              f"- E={cfg.num_epochs} · merge methods compared per epoch: "
              f"`{cfg.merge_methods}` (alpha={cfg.merge_alpha}, density={cfg.ties_density}, "
              f"drop_p={cfg.dare_drop_p}, slerp_t={cfg.slerp_t})", "",
-             f"## Per-epoch — SFT vs merge methods (in-loop, limit={cfg.eval_limit})", "", header, sep]
+             f"## Per-epoch - SFT vs merge methods (in-loop, limit={cfg.eval_limit})", "", header, sep]
     for h in history:
         for name, scores in h["scores"].items():
             mark = " ⬅ winner" if name == h["winner"] else ""

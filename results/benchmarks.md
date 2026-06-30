@@ -1,4 +1,4 @@
-# Mythos distillation — benchmark results
+# Mythos distillation - benchmark results
 
 - instruct `Qwen/Qwen3.5-0.8B` · dataset `WithinUsAI/claude_mythos_distilled_25k`
 - E=3 · merge_alpha=0.5 (soup: instruct + α·(sft−instruct))

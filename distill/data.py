@@ -4,7 +4,7 @@
 (`{"messages": [{"role":"user",...},{"role":"assistant",...}], ...}`), with the
 distilled reasoning living in the assistant turn. We render each row to a single
 `text` field via the student tokenizer's chat template; TRL's SFTTrainer then
-tokenizes `text` and trains on it (full-sequence SFT — the long assistant turn,
+tokenizes `text` and trains on it (full-sequence SFT - the long assistant turn,
 which carries the reasoning, dominates the loss).
 """
 from __future__ import annotations
@@ -27,7 +27,7 @@ def render_chat(messages: List[dict], tokenizer) -> str:
     """Render a full conversation to text via the chat template (no generation prompt).
 
     The complete assistant turn is included verbatim, so this is a training target,
-    not a prompt — `add_generation_prompt=False` and thinking flags are irrelevant.
+    not a prompt - `add_generation_prompt=False` and thinking flags are irrelevant.
     """
     return tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=False,

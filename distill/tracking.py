@@ -1,4 +1,4 @@
-"""MLflow logging helpers — thin, best-effort wrappers over the `mlflow` library.
+"""MLflow logging helpers - thin, best-effort wrappers over the `mlflow` library.
 
 The tracking *server* runs separately (default http://localhost:5000). These
 helpers configure the client and wrap a run so any tracking hiccup (server down,

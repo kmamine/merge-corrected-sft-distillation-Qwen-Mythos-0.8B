@@ -4,11 +4,11 @@ Distill the [`WithinUsAI/claude_mythos_distilled_25k`](https://huggingface.co/da
 reasoning data into **Qwen3.5-0.8B**, and **measure whether merging helps**. The recipe interleaves
 SFT with model merging: after each epoch, the plain SFT checkpoint is compared against its
 task-arithmetic merge onto the instruct model, and the better one (on benchmarks) seeds the next
-epoch — using merging as a *correction* against forgetting general capability.
+epoch - using merging as a *correction* against forgetting general capability.
 
 ## Model
 
-**🤗 [`Amine-CV/Qwen3.5-0.8B-Mythos-Distill`](https://huggingface.co/Amine-CV/Qwen3.5-0.8B-Mythos-Distill)** —
+**🤗 [`Amine-CV/Qwen3.5-0.8B-Mythos-Distill`](https://huggingface.co/Amine-CV/Qwen3.5-0.8B-Mythos-Distill)** -
 the published checkpoint (the epoch-1 merge correction; GSM8K +3.7 pts ≈2σ over the base instruct,
 MMLU retained). Full benchmark tables, training trajectory, and ±stderr results are in the model card
 and [`results/REPORT.md`](results/REPORT.md).
@@ -62,11 +62,11 @@ retaining MMLU; aggregate gains are within noise on a single run.
 ![Final benchmarks](results/figures/fig_final_benchmarks.png)
 
 **Per-epoch SFT vs 7 merge methods:** merges win at epoch 1 (TIES best) right after the instruct→SFT
-shift; once stabilized, plain SFT overtakes — so *when* you merge matters more than *which* method.
+shift; once stabilized, plain SFT overtakes - so *when* you merge matters more than *which* method.
 
 ![Per-epoch method comparison](results/figures/fig_method_comparison.png)
 
-**Training dynamics:** SFT loss collapses to ~0.02 (≈99% token accuracy) — heavy memorization of the
+**Training dynamics:** SFT loss collapses to ~0.02 (≈99% token accuracy) - heavy memorization of the
 templated data, which motivates the merge correction.
 
 ![SFT loss collapse](results/figures/fig_loss_collapse.png)

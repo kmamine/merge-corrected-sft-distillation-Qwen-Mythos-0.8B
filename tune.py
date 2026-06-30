@@ -1,7 +1,7 @@
 """Autonomous hyperparameter loop (autoresearch-style keep/discard) over our recipe.
 
 Borrows the "propose a change → run cheap → score → keep-or-discard → repeat" loop
-philosophy (à la karpathy/autoresearch) but drives our own train_distill recipe — no
+philosophy (à la karpathy/autoresearch) but drives our own train_distill recipe - no
 external dependency. Each trial is a CHEAP proxy run (1 epoch, a data subset, fast
 benchmarks, no final eval); we keep the config with the best in-loop aggregate. The
 winning learning rate is then used for one full recipe run + publish.

@@ -40,7 +40,7 @@ def fig_final_benchmarks():
         ax.bar([xi + (i - 1) * w for xi in x], vals, w, yerr=errs, capsize=3, label=labels[m])
     ax.set_xticks(list(x)); ax.set_xticklabels(["GSM8K", "MMLU", "ARC-C", "Aggregate"])
     ax.set_ylabel("score"); ax.set_ylim(0, 0.6)
-    ax.set_title("Final benchmarks (full eval, ±1 SE) — original vs SFT vs SFT+merge")
+    ax.set_title("Final benchmarks (full eval, ±1 SE) - original vs SFT vs SFT+merge")
     ax.legend(fontsize=9); ax.grid(axis="y", alpha=0.3)
     fig.tight_layout(); fig.savefig(f"{OUT}/fig_final_benchmarks.png", dpi=150); plt.close(fig)
 
@@ -91,7 +91,7 @@ def fig_loss_collapse():
 def fig_algorithm():
     """Render the README's Mermaid flowchart to PNG via the mermaid.ink service (HF model
     cards don't draw Mermaid; GitHub keeps the live diagram). README is the single source
-    of the diagram. Network call — on failure, the existing PNG is kept."""
+    of the diagram. Network call - on failure, the existing PNG is kept."""
     import base64
 
     try:

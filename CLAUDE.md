@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A reproducible pipeline that **distills Claude-Mythos reasoning data into Qwen3.5-0.8B** and
 **measures whether merging helps**. The novel piece is the recipe: **merge-corrected iterative SFT**
-— after each SFT epoch we compare the plain SFT checkpoint against its task-arithmetic merge onto the
+- after each SFT epoch we compare the plain SFT checkpoint against its task-arithmetic merge onto the
 instruct model, and seed the next epoch with whichever scores higher on benchmarks (merging used as a
 *correction* against forgetting general capability). The deliverable is the **SFT vs SFT+merge**
 comparison across GSM8K / MMLU / ARC-Challenge (with the original base + instruct as baselines),
@@ -48,7 +48,7 @@ pure PyTorch in `distill/merge.py`, anchored on the instruct: `delta = sft − i
 
 - **`train_distill.py`** is a single-process orchestrator: it shells out to `sft_worker.py` via
   `accelerate launch` for the multi-GPU SFT step, then runs merge (CPU) + benchmarks (cuda:1) and the
-  decision in-process. This separation is deliberate — keep the heavy DDP SFT in the subprocess and
+  decision in-process. This separation is deliberate - keep the heavy DDP SFT in the subprocess and
   the orchestration single-process.
 - **`distill/eval_bench.py`** wraps lm-evaluation-harness; models are evaluated in **plain completion
   mode (no chat template)** so base / instruct / SFT / merged are compared apples-to-apples.
@@ -66,14 +66,14 @@ uv pip install -r requirements.txt        # torch, transformers, trl, lm-eval, m
 uv pip install --group dev                # pytest
 ```
 
-**Tests (run first when changing pure logic — TDD; all offline, no GPU/network):**
+**Tests (run first when changing pure logic - TDD; all offline, no GPU/network):**
 
 ```bash
 python -m pytest                          # config, utils, data, tracking, recipe, merge
 python -m pytest tests/test_recipe.py -q  # single file
 ```
 
-**GPUs:** two on this box — `cuda:0` and `cuda:1`, but **`cuda:0` is shared with another process**.
+**GPUs:** two on this box - `cuda:0` and `cuda:1`, but **`cuda:0` is shared with another process**.
 The orchestrator runs **SFT on both GPUs** (`CUDA_VISIBLE_DEVICES=0,1` + `configs/accelerate_multi.yaml`)
 and **benchmarks/merge on cuda:1** (the free one). MLflow server runs separately on
 `http://localhost:5000` (env `mlflow_kma`); we log to it via the **mlflow library** (client installed
@@ -98,7 +98,7 @@ python publish_hub.py --model_dir outputs/distill/epoch3/merge --repo Amine-CV/Q
 
 **Config overrides** flow `dataclass defaults → YAML → --set key=value` (later wins); values are
 YAML-parsed then **coerced to the dataclass field's annotated type** in `load_config`
-(`distill/config.py::_coerce`) — so `--set learning_rate=2e-5` reaches the optimizer as a float, not
+(`distill/config.py::_coerce`) - so `--set learning_rate=2e-5` reaches the optimizer as a float, not
 the string `"2e-5"`. Keep new `SFTMergeConfig` fields plain scalars / `Optional[scalar]`.
 
 ## Invariants to preserve when editing
@@ -113,7 +113,7 @@ the string `"2e-5"`. Keep new `SFTMergeConfig` fields plain scalars / `Optional[
 - **`pick_best` chooses the highest-aggregate candidate** among `{sft} ∪ merges`; on ties a merge
   beats plain SFT (the catastrophic-forgetting guard). Don't flip the tie-bias silently.
 - **In-loop benchmarks are `eval_limit`-capped for speed; the FINAL eval is full** (`limit<=0`). Don't
-  conflate the two — the per-epoch table is a fast proxy, the final table is the result.
+  conflate the two - the per-epoch table is a fast proxy, the final table is the result.
 - **Benchmarks run in completion mode (no chat template)** for apples-to-apples across all models.
 - **MLflow + HF are best-effort** (`distill/tracking.py`, `publish_hub.py`): a tracking/upload hiccup
   must never lose a training run.
@@ -123,7 +123,7 @@ the string `"2e-5"`. Keep new `SFTMergeConfig` fields plain scalars / `Optional[
 - **Test-driven development.** Failing test first. The pure cores (`config` coercion, `recipe.decide`,
   `merge.merge_state_dicts`, `eval_bench.primary_metric/aggregate`, `data.render_chat`,
   `tracking` helpers) are unit-tested offline via a `FakeTokenizer`; keep new logic testable the same
-  way — push GPU/network to the edges.
+  way - push GPU/network to the edges.
 - **Scientific method.** Treat recipe/hyperparameter changes as experiments: state the hypothesis,
   change one variable (`merge_alpha`, E, lr, …), and report the SFT-vs-SFT+merge benchmark table vs the
   original-model baselines. Don't claim an improvement without before/after numbers.

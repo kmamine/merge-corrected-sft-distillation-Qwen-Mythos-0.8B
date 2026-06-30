@@ -1,4 +1,4 @@
-# Merge-Corrected Iterative SFT Distillation into Qwen3.5-0.8B — Experimental Report
+# Merge-Corrected Iterative SFT Distillation into Qwen3.5-0.8B - Experimental Report
 
 ## Abstract
 We distill Claude-"Mythos" reasoning data (`WithinUsAI/claude_mythos_distilled_25k`, ≈25k chat
@@ -65,7 +65,7 @@ Per-epoch SFT (Run 2, lr=5e-6):
 | 2 | 0.046 | 0.992 |
 | 3 | 0.020 | 0.992 |
 
-Training loss collapses toward ~0.02 with ~99% token accuracy in every epoch — the model rapidly
+Training loss collapses toward ~0.02 with ~99% token accuracy in every epoch - the model rapidly
 **memorizes the heavily-templated Mythos response format**. Lowering the learning rate from 1e-5 to
 5e-6 slowed but did not prevent this on the full data. This is the core motivation for the merge
 correction and a key caveat on the magnitude of genuine generalization.
@@ -74,7 +74,7 @@ correction and a key caveat on the magnitude of genuine generalization.
 
 ## 4. Results
 
-### 4.1 Per-epoch method comparison (in-loop, limit=32 — high variance, decision-only)
+### 4.1 Per-epoch method comparison (in-loop, limit=32 - high variance, decision-only)
 Aggregate per candidate (full per-task table in `results/benchmarks_mm.md`):
 
 | epoch (start) | sft | linear | ties | dare_linear | dare_ties | slerp | breadcrumbs | della | winner |
@@ -84,9 +84,9 @@ Aggregate per candidate (full per-task table in `results/benchmarks_mm.md`):
 | 3 (e2/sft) | **0.425** | 0.395 | 0.395 | 0.385 | 0.385 | 0.396 | 0.386 | 0.396 | sft |
 
 Observations: at **epoch 1**, *every* merge beats plain SFT (SFT 0.392; trim-based `ties`/`dare_ties`
-best at 0.417/0.415) — the correction recovers reasoning the raw SFT-from-instruct step lost. From
+best at 0.417/0.415) - the correction recovers reasoning the raw SFT-from-instruct step lost. From
 **epoch 2 onward, plain SFT wins** and merges only pull performance back. SLERP is consistently weakest.
-**Caveat:** `limit=32` makes GSM8K/ARC components high-variance (binomial SE ≈ ±0.06–0.09 at n=32), so
+**Caveat:** `limit=32` makes GSM8K/ARC components high-variance (binomial SE ≈ ±0.06-0.09 at n=32), so
 many of these per-method gaps are within noise; they drive the heuristic decision but are not
 publication-grade comparisons.
 
@@ -94,14 +94,14 @@ publication-grade comparisons.
 
 ### 4.2 Trajectory (the road taken)
 `instruct → epoch 1: TIES merge (0.417) → epoch 2: SFT (0.425) → epoch 3: SFT (0.425, global best)`.
-The merge correction was selected exactly once — at the first epoch — after which SFT carried the run.
+The merge correction was selected exactly once - at the first epoch - after which SFT carried the run.
 
 ### 4.3 Final full benchmarks (point estimates)
 | model | GSM8K | MMLU | ARC-C | aggregate |
 |---|---|---|---|---|
 | **original Qwen3.5-0.8B (before training)** | 0.326 | 0.481 | 0.375 | 0.394 |
-| Run 2 best — `epoch3/sft` (lr 5e-6, multi-method) | 0.342 | 0.473 | 0.381 | 0.399 |
-| Run 1 best — `epoch1/merge` (lr 1e-5, linear soup) | **0.363** | 0.481 | 0.370 | **0.405** |
+| Run 2 best - `epoch3/sft` (lr 5e-6, multi-method) | 0.342 | 0.473 | 0.381 | 0.399 |
+| Run 1 best - `epoch1/merge` (lr 1e-5, linear soup) | **0.363** | 0.481 | 0.370 | **0.405** |
 
 Analytic standard errors at full-eval sample sizes: GSM8K ≈ ±0.013, MMLU ≈ ±0.004, ARC-C ≈ ±0.014,
 **aggregate ≈ ±0.007**. So: Run-1-best vs original = **+0.010 (≈1.5 SE, marginal)**; Run-2-best vs
@@ -118,8 +118,8 @@ Full-eval re-run of the three contenders with lm-eval's reported per-task stderr
 | run2 `epoch3/sft` (lr5e-6, multi-method) | 0.343 ±0.013 | 0.473 ±0.004 | 0.381 ±0.014 | 0.399 ±0.007 |
 
 **Significance (two-sample z on the difference vs original):**
-- run1-best **GSM8K +0.037, z ≈ 2.0** — marginally significant; the genuine reasoning signal.
-- run1-best **MMLU −0.001 (retained exactly)**; run2-best **MMLU −0.009, z ≈ 1.5** — the plain-SFT path
+- run1-best **GSM8K +0.037, z ≈ 2.0** - marginally significant; the genuine reasoning signal.
+- run1-best **MMLU −0.001 (retained exactly)**; run2-best **MMLU −0.009, z ≈ 1.5** - the plain-SFT path
   shows slight forgetting that the merge path does not (modest support for H1: merge guards capability).
 - run1-best **ARC −0.005 (ns)**; aggregate **+0.010, z ≈ 1.1 (not significant)**.
 - run2-best vs original: GSM8K +0.017 (z ≈ 0.9, ns), aggregate +0.005 (z ≈ 0.5, ns).
@@ -135,7 +135,7 @@ MMLU retention + top aggregate) and is the recommended publish candidate.
   shift). The decision policy correctly took it there and reverted to SFT afterward. Net retention is
   good (MMLU/ARC essentially flat), but the per-epoch benefit of merging is concentrated and small.
 - **H2 (method differences):** *Supported but small.* Methods differ (trim-based `ties`/`dare_ties` best
-  when merging mattered; `slerp` worst), but the spread (~0.02–0.03 aggregate at limit=32) is comparable
+  when merging mattered; `slerp` worst), but the spread (~0.02-0.03 aggregate at limit=32) is comparable
   to the eval noise at that sample size. The *timing* of the merge dominates the *choice* of method.
 - **H3 (distillation):** *Weakly supported.* All trained variants exceed the original on aggregate, but
   by ≤ ~1.5 SE; the gain is concentrated in GSM8K (+1.5 to +3.7 pts) and partly offset by a small MMLU
@@ -144,7 +144,7 @@ MMLU retention + top aggregate) and is the recommended publish candidate.
 ## 6. Threats to validity
 - **Single run / single seed:** no variance across seeds; small aggregate gaps (≤0.01) are not
   statistically robust. Multi-seed runs are required for significance claims.
-- **In-loop eval noise:** per-epoch decisions used `limit=32`, where GSM8K/ARC have large SE — the
+- **In-loop eval noise:** per-epoch decisions used `limit=32`, where GSM8K/ARC have large SE - the
   per-method "winners" are partly noise-driven.
 - **Over-memorization:** train loss ≈ 0.02 / 99% token accuracy indicates the model fits the templated
   style; benchmark gains may understate or overstate transfer of genuine reasoning.

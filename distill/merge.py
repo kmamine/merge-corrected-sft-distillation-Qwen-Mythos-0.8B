@@ -1,4 +1,4 @@
-"""Merge corrections toward the instruct model — several mergekit-style methods.
+"""Merge corrections toward the instruct model - several mergekit-style methods.
 
 All methods combine the original instruct weights with the SFT checkpoint via the
 task vector `delta = sft - instruct`, keeping embedding / LM-head tensors from
@@ -109,7 +109,7 @@ def merge_state_dicts(instruct_sd, sft_sd, method="linear", alpha=0.5, density=0
     """Pure tensor merge by `method`. Returns (merged_state_dict, n_merged, n_kept).
 
     A key is merged only if present in both, not excluded, shape-matched, and floating
-    point — otherwise the instruct tensor is kept. DARE randomness is seeded for repro.
+    point - otherwise the instruct tensor is kept. DARE randomness is seeded for repro.
     """
     if method not in METHODS:
         raise ValueError(f"unknown merge method {method!r}; choose from {METHODS}")
